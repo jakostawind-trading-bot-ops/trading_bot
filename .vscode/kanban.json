@@ -1,0 +1,42 @@
+{
+    "title": "Kanban",
+    "cols": [
+        {
+            "title": "Bugs",
+            "tasks": [],
+            "id": "tcpcs4y9vxn6lz0hgn1yq8oo",
+            "color": "#eb144c"
+        },
+        {
+            "title": "To-Do",
+            "tasks": [
+                {
+                    "text": "command subscriber\n",
+                    "id": "ilmhzp9ue01y1xh2yhf4o15e"
+                }
+            ],
+            "id": "mpblool7nnhoszuxpzvopcae",
+            "color": "#fcb900"
+        },
+        {
+            "title": "Doing",
+            "tasks": [
+                {
+                    "text": "запуск бота и паблиш ивента в натс",
+                    "id": "dfajk3yhfm3dbp4naookcyvt"
+                }
+            ],
+            "id": "hny1bluivhg0ibzp8hnxh8x0",
+            "color": "#0693e3"
+        },
+        {
+            "title": "Done",
+            "tasks": [],
+            "id": "fp0qxvhfpfek5drgp78ftr2p",
+            "color": "#00d084"
+        }
+    ],
+    "autosave": true,
+    "saveToFile": true,
+    "timestamp": 1794838809464
+}
