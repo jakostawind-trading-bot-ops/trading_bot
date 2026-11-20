@@ -17,5 +17,5 @@ type EventPublisherRoute struct {
 }
 
 type EventPublisherPort interface {
-	PublishEvent(ctx context.Context, Event events.BaseBotEventI)
+	PublishEvent(ctx context.Context, Event events.BaseBotEventI) error
 }

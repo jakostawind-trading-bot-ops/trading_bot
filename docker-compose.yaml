@@ -1,0 +1,12 @@
+name: trading_bot
+
+services:
+  trading_bot:
+    container_name: trading_bot
+    build:
+      context: .
+      target: runtime
+    env_file:
+      - ./.env
+    init: true
+    restart: unless-stopped

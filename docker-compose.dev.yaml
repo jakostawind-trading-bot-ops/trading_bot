@@ -1,0 +1,19 @@
+name: dev_trading_bot
+
+services:
+  trading_bot:
+    build:
+      target: dev
+    env_file: !override
+      - ./.env.dev
+    volumes:
+      - ./cmd:/app/cmd:ro
+      - ./internal:/app/internal:ro
+    networks:
+      - dev_nats
+    restart: "no"
+
+networks:
+  dev_nats:
+    external: true
+    name: dev_nats
