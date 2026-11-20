@@ -3,6 +3,7 @@ package transport_nats
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"time"
@@ -109,6 +110,8 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 		Base.Payload = map[string]any{}
 	}
 
+	Logger := slog.With("component", "nats_publisher", "bot_id", Base.BotID, "message_type", Route.MessageType)
+	Logger.DebugContext(ctx, "Кодирование события")
 	// Кодирование выполняется до ожидания транспорта.
 	Data, err := Route.Encode(ctx, Event)
 	if err != nil {
@@ -119,6 +122,7 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 	// Каждый вызов получает актуальное соединение после возможного переподключения.
 	PublishCtx, Cancel := context.WithTimeout(ctx, publishTimeout)
 	defer Cancel()
+	Logger.DebugContext(PublishCtx, "Ожидание JetStream", "subject", Subject, "stream", Publisher.streamName)
 	JetStream, err := Publisher.getJetStream(PublishCtx)
 	if err != nil {
 		return fmt.Errorf("publisher: получение JetStream: %w", err)
@@ -126,13 +130,18 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 	if JetStream == nil {
 		return fmt.Errorf("publisher: фабрика вернула пустой JetStream")
 	}
-	_, err = JetStream.Publish(
+	Logger.DebugContext(PublishCtx, "Отправка события в JetStream", "subject", Subject)
+	Ack, err := JetStream.Publish(
 		Subject, Data,
 		nats.Context(PublishCtx),
 		nats.ExpectStream(Publisher.streamName),
 	)
 	if err != nil {
 		return fmt.Errorf("publisher: публикация %s: %w", Subject, err)
+	}
+	if Ack != nil {
+		Logger.InfoContext(PublishCtx, "JetStream подтвердил публикацию",
+			"subject", Subject, "stream", Ack.Stream, "sequence", Ack.Sequence)
 	}
 	return nil
 }
