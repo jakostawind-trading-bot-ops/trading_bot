@@ -3,11 +3,14 @@ package states
 import (
 	"crypto/rand"
 	"math/big"
+
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/lifecycle"
 )
 
 // GeneralState хранит общее состояние запущенного экземпляра бота.
 type GeneralState struct {
-	BotID string
+	BotID     string
+	BotStatus lifecycle.LifecycleStatus
 }
 
 // GenerateBotID возвращает случайный идентификатор из 16 букв A-Z.
@@ -24,4 +27,12 @@ func GenerateBotID() (string, error) {
 		id[i] = alphabet[index.Int64()]
 	}
 	return string(id[:]), nil
+}
+
+func (GeneralState *GeneralState) GetBotStatus() lifecycle.LifecycleStatus {
+	return GeneralState.BotStatus
+}
+
+func (GeneralState *GeneralState) SetBotStatus(Status lifecycle.LifecycleStatus) {
+	GeneralState.BotStatus = Status
 }

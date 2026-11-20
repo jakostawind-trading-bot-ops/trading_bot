@@ -22,7 +22,7 @@ type JetStreamFactory func(ctx context.Context) (nats.JetStreamContext, error)
 // NatsEventPublisher кодирует события и публикует их с ожиданием PubAck.
 // Создаётся конструктором; таблица маршрутов после создания не меняется.
 type NatsEventPublisher struct {
-	routes       map[reflect.Type]ports.EventPublisherRoute // Маршруты по конкретному Go-типу.
+	Routes       map[reflect.Type]ports.EventPublisherRoute // Маршруты по конкретному Go-типу.
 	getJetStream JetStreamFactory                           // Отложенный доступ к текущему соединению.
 	streamName   string                                     // Ожидаемый существующий stream; publisher его не создаёт.
 }
@@ -65,7 +65,7 @@ func NewNatsEventPublisher(
 	}
 
 	return &NatsEventPublisher{
-		routes:       RouteMap,
+		Routes:       RouteMap,
 		getJetStream: GetJetStream,
 		streamName:   StreamName,
 	}, nil
@@ -92,7 +92,7 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 	if !Value.IsValid() || (Value.Kind() == reflect.Pointer && Value.IsNil()) {
 		return fmt.Errorf("publisher: событие отсутствует")
 	}
-	Route, Exists := Publisher.routes[Value.Type()]
+	Route, Exists := Publisher.Routes[Value.Type()]
 	if !Exists {
 		return fmt.Errorf("publisher: маршрут для %T не зарегистрирован", Event)
 	}
