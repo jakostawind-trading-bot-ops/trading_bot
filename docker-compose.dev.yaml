@@ -2,6 +2,7 @@ name: dev_trading_bot
 
 services:
   trading_bot:
+    container_name: dev-trading_bot-1
     build:
       target: dev
     env_file: !override

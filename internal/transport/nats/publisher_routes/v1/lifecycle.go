@@ -14,7 +14,7 @@ import (
 
 func BotStartedEventV1PublisherRoute() ports.EventPublisherRoute {
 	return ports.EventPublisherRoute{
-		EventType:   reflect.TypeFor[*events.BaseBotEventI](),
+		EventType:   reflect.TypeFor[*events.BotStartedEvent](),
 		MessageType: "v1.lifecycle.bot_started_event",
 		Encode: func(ctx context.Context, Event events.BaseBotEventI) ([]byte, error) {
 			if err := ctx.Err(); err != nil {
