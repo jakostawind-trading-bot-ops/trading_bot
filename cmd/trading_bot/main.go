@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/di"
+	di_states "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/states"
 	di_nats "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/transport/nats"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
 	publisher_routes "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/publisher_routes"
 	"go.uber.org/fx"
 )
@@ -17,11 +19,12 @@ func main() {
 		di.BootstrapSettingsProvider(&Settings),
 		fx.Provide(di_nats.NatsClientProvider),
 		fx.Provide(
+			di_states.GeneralStateProvider,
 			publisher_routes.EventPublisherRoutesRegistry,
 			di_nats.NatsEventPublisherProvider,
 		),
-		// Создаём publisher и NatsClient, пока use case ещё не подключён.
-		fx.Invoke(func(_ ports.EventPublisherPort) {}),
+		// Создаём состояние бота и publisher с NatsClient при запуске.
+		fx.Invoke(func(_ *states.GeneralState, _ ports.EventPublisherPort) {}),
 	)
 	App.Run()
 }
