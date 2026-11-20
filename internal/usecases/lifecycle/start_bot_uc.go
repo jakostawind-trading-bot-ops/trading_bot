@@ -17,7 +17,12 @@ type StartBotUC struct {
 
 func (StartBotUC *StartBotUC) Execute(ctx context.Context) error {
 
-	Event := &events.BotStartedEvent{}
+	Event := &events.BotStartedEvent{
+		BaseBotEvent: events.BaseBotEvent{
+			BotID: StartBotUC.GeneralState.BotID,
+		},
+		BotStatus: StartBotUC.GeneralState.GetBotStatus(),
+	}
 	StartBotUC.EventPublisherPort.PublishEvent(ctx, Event)
 
 	return nil

@@ -6,9 +6,9 @@ import (
 )
 
 type BaseBotEventContractV1 struct {
-	BotID     string      `json:"bot_id"`
-	Payload   map[any]any `json:"payload"`
-	Timestamp string      `json:"timestamp"`
+	BotID     string         `json:"bot_id"`
+	Payload   map[string]any `json:"payload"`
+	Timestamp string         `json:"timestamp"`
 }
 
 type BaseBotEventContractV1I interface {

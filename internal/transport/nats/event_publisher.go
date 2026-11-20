@@ -73,7 +73,8 @@ func NewNatsEventPublisher(
 
 // PublishEvent кодирует Event и ждёт подтверждения сохранения в JetStream.
 // ctx должен быть ненулевым; ограничивает ожидание соединения и PubAck.
-// Event нельзя изменять до возврата метода.
+// Заполняет отсутствующие Timestamp и Payload в Event.
+// Event нельзя изменять или публиковать параллельно до возврата метода.
 // Возвращает ошибку события, маршрута, кодирования или транспорта.
 // Соединение и stream не создаёт самостоятельно; состояние бота не изменяет.
 //
@@ -97,14 +98,21 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 		return fmt.Errorf("publisher: маршрут для %T не зарегистрирован", Event)
 	}
 
+	Base := Event.IsBaseBotEvent()
+	if Base == nil || !validSubjectToken(Base.BotID) {
+		return fmt.Errorf("publisher: BotID должен быть одним непустым токеном subject")
+	}
+	if strings.TrimSpace(Base.Timestamp) == "" {
+		Base.Timestamp = Base.SetTimestamp()
+	}
+	if Base.Payload == nil {
+		Base.Payload = map[string]any{}
+	}
+
 	// Кодирование выполняется до ожидания транспорта.
 	Data, err := Route.Encode(ctx, Event)
 	if err != nil {
 		return fmt.Errorf("publisher: %s: %w", Route.MessageType, err)
-	}
-	Base := Event.IsBaseBotEvent()
-	if Base == nil || !validSubjectToken(Base.BotID) {
-		return fmt.Errorf("publisher: BotID должен быть одним непустым токеном subject")
 	}
 	Subject := "bot." + Base.BotID + ".to.control.event." + Route.MessageType
 

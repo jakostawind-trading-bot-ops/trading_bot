@@ -29,8 +29,8 @@ func main() {
 		fx.Provide(
 			di_usecases.StartBotUCProvider,
 		),
-		fx.Invoke(func(lc fx.Lifecycle, startBot *usecases_lifecycle.StartBotUC) {
-			lc.Append(fx.Hook{OnStart: startBot.Execute})
+		fx.Invoke(func(lc fx.Lifecycle, StartBot *usecases_lifecycle.StartBotUC) {
+			lc.Append(fx.Hook{OnStart: StartBot.Execute})
 		}),
 	)
 	App.Run()
