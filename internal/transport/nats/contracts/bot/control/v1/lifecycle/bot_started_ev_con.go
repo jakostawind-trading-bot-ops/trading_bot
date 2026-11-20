@@ -1,0 +1,7 @@
+package transport_nats_contracts_bot_control_v1_lifecycle
+
+import transport_nats_contracts_bot_control_v1_common "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/bot/control/v1/common"
+
+type BotStartedEventContractV1 struct {
+	transport_nats_contracts_bot_control_v1_common.BaseBotEventContractV1
+}
