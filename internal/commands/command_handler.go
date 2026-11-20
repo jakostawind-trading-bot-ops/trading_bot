@@ -1,10 +1,10 @@
 package events_bot
 
-import "context"
+// import "context"
 
-type BotEventHandlerI interface {
-	HandleBotEvent(
-		ctx context.Context,
-		BotEvent BaseBotEventI,
-	) error
-}
+// type BotEventHandlerI interface {
+// 	HandleBotEvent(
+// 		ctx context.Context,
+// 		BotEvent BaseBotEventI,
+// 	) error
+// }

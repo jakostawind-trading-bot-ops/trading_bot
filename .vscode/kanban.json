@@ -11,6 +11,10 @@
             "title": "To-Do",
             "tasks": [
                 {
+                    "text": "в internal/transport/nats/publisher_routes/v1/lifecycle.go раздеить каждый роутер по разным файлам в одну папку\n",
+                    "id": "l7whjdq8g3olhkava07na4r3"
+                },
+                {
                     "text": "command subscriber\n",
                     "id": "ilmhzp9ue01y1xh2yhf4o15e"
                 }
@@ -38,5 +42,5 @@
     ],
     "autosave": true,
     "saveToFile": true,
-    "timestamp": 1794838809464
+    "timestamp": 1795175706542
 }
