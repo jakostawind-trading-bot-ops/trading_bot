@@ -1,10 +1,10 @@
-package events_bot
+package commands
 
-// import "context"
+import "context"
 
-// type BotEventHandlerI interface {
-// 	HandleBotEvent(
-// 		ctx context.Context,
-// 		BotEvent BaseBotEventI,
-// 	) error
-// }
+type ControlCommandHandlerI interface {
+	HandleControlCommand(
+		ctx context.Context,
+		ControlCommand BaseControlCommandI,
+	) error
+}
