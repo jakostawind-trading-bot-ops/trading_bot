@@ -3,6 +3,7 @@ package transport_nats
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"time"
@@ -73,7 +74,8 @@ func NewNatsEventPublisher(
 
 // PublishEvent кодирует Event и ждёт подтверждения сохранения в JetStream.
 // ctx должен быть ненулевым; ограничивает ожидание соединения и PubAck.
-// Event нельзя изменять до возврата метода.
+// Заполняет отсутствующие Timestamp и Payload в Event.
+// Event нельзя изменять или публиковать параллельно до возврата метода.
 // Возвращает ошибку события, маршрута, кодирования или транспорта.
 // Соединение и stream не создаёт самостоятельно; состояние бота не изменяет.
 //
@@ -97,20 +99,30 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 		return fmt.Errorf("publisher: маршрут для %T не зарегистрирован", Event)
 	}
 
+	Base := Event.IsBaseBotEvent()
+	if Base == nil || !validSubjectToken(Base.BotID) {
+		return fmt.Errorf("publisher: BotID должен быть одним непустым токеном subject")
+	}
+	if strings.TrimSpace(Base.Timestamp) == "" {
+		Base.Timestamp = Base.SetTimestamp()
+	}
+	if Base.Payload == nil {
+		Base.Payload = map[string]any{}
+	}
+
+	Logger := slog.With("component", "nats_publisher", "bot_id", Base.BotID, "message_type", Route.MessageType)
+	Logger.DebugContext(ctx, "Кодирование события")
 	// Кодирование выполняется до ожидания транспорта.
 	Data, err := Route.Encode(ctx, Event)
 	if err != nil {
 		return fmt.Errorf("publisher: %s: %w", Route.MessageType, err)
-	}
-	Base := Event.IsBaseBotEvent()
-	if Base == nil || !validSubjectToken(Base.BotID) {
-		return fmt.Errorf("publisher: BotID должен быть одним непустым токеном subject")
 	}
 	Subject := "bot." + Base.BotID + ".to.control.event." + Route.MessageType
 
 	// Каждый вызов получает актуальное соединение после возможного переподключения.
 	PublishCtx, Cancel := context.WithTimeout(ctx, publishTimeout)
 	defer Cancel()
+	Logger.DebugContext(PublishCtx, "Ожидание JetStream", "subject", Subject, "stream", Publisher.streamName)
 	JetStream, err := Publisher.getJetStream(PublishCtx)
 	if err != nil {
 		return fmt.Errorf("publisher: получение JetStream: %w", err)
@@ -118,13 +130,18 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 	if JetStream == nil {
 		return fmt.Errorf("publisher: фабрика вернула пустой JetStream")
 	}
-	_, err = JetStream.Publish(
+	Logger.DebugContext(PublishCtx, "Отправка события в JetStream", "subject", Subject)
+	Ack, err := JetStream.Publish(
 		Subject, Data,
 		nats.Context(PublishCtx),
 		nats.ExpectStream(Publisher.streamName),
 	)
 	if err != nil {
 		return fmt.Errorf("publisher: публикация %s: %w", Subject, err)
+	}
+	if Ack != nil {
+		Logger.InfoContext(PublishCtx, "JetStream подтвердил публикацию",
+			"subject", Subject, "stream", Ack.Stream, "sequence", Ack.Sequence)
 	}
 	return nil
 }
