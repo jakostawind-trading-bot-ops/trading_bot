@@ -1,15 +1,15 @@
-package events_bot
+package commands
 
-// type BaseBotEvent struct {
-// 	BotID     string
-// 	Payload   map[any]any
-// 	Timestamp string
-// }
+type BaseControlCommand struct {
+	BotID     string
+	Payload   map[string]any
+	Timestamp string
+}
 
-// type BaseBotEventI interface {
-// 	IsBaseBotEvent() *BaseBotEvent
-// }
+type BaseControlCommandI interface {
+	IsBaseControlCommand() *BaseControlCommand
+}
 
-// func (BaseBotEvent *BaseBotEvent) IsBaseBotEvent() *BaseBotEvent {
-// 	return BaseBotEvent
-// }
+func (BaseControlCommand *BaseControlCommand) IsBaseControlCommand() *BaseControlCommand {
+	return BaseControlCommand
+}

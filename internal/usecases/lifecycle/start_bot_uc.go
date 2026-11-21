@@ -11,13 +11,13 @@ import (
 )
 
 type StartBotUC struct {
-	GeneralState *states.GeneralState
-	Lifecycle lifecycle.Lifecycle
+	GeneralState       *states.GeneralState
+	Lifecycle          lifecycle.Lifecycle
 	EventPublisherPort ports.EventPublisherPort
 }
 
-// Execute публикует событие запуска и записывает ошибку публикации в лог.
-func (StartBotUC *StartBotUC) Execute(ctx context.Context) error {
+// Execute публикует событие запуска. Возвращает ошибку публикации подписчику команд.
+func (StartBotUC *StartBotUC) Execute(Context context.Context) error {
 	Event := &events.BotStartedEvent{
 		BaseBotEvent: events.BaseBotEvent{
 			BotID: StartBotUC.GeneralState.BotID,
@@ -25,9 +25,10 @@ func (StartBotUC *StartBotUC) Execute(ctx context.Context) error {
 		BotStatus: StartBotUC.GeneralState.GetBotStatus(),
 	}
 	Logger := slog.With("operation", "start_bot", "bot_id", Event.BotID)
-	Logger.DebugContext(ctx, "Публикация BotStartedEvent", "bot_status", Event.BotStatus)
-	if err := StartBotUC.EventPublisherPort.PublishEvent(ctx, Event); err != nil {
-		Logger.ErrorContext(ctx, "Не удалось опубликовать BotStartedEvent", "error", err)
+	Logger.DebugContext(Context, "Публикация BotStartedEvent", "bot_status", Event.BotStatus)
+	if PublishError := StartBotUC.EventPublisherPort.PublishEvent(Context, Event); PublishError != nil {
+		Logger.ErrorContext(Context, "Не удалось опубликовать BotStartedEvent", "error", PublishError)
+		return PublishError
 	}
 
 	return nil
