@@ -9,16 +9,7 @@
         },
         {
             "title": "To-Do",
-            "tasks": [
-                {
-                    "text": "паблишь ивент в логгере должен передавать не длину сообщения, а само сообщение",
-                    "id": "srpxpcpyy8j4buobkl1w5da3"
-                },
-                {
-                    "text": "в internal/transport/nats/publisher_routes/v1/lifecycle.go раздеить каждый роутер по разным файлам в одну папку\n",
-                    "id": "l7whjdq8g3olhkava07na4r3"
-                }
-            ],
+            "tasks": [],
             "id": "mpblool7nnhoszuxpzvopcae",
             "color": "#fcb900"
         },
@@ -26,8 +17,8 @@
             "title": "Doing",
             "tasks": [
                 {
-                    "text": "run_bot_command\n",
-                    "id": "hula4lspz3m1yllu5ce2awg8"
+                    "text": "паблишь ивент в логгере должен передавать не длину сообщения, а само сообщение",
+                    "id": "srpxpcpyy8j4buobkl1w5da3"
                 }
             ],
             "id": "hny1bluivhg0ibzp8hnxh8x0",
@@ -43,6 +34,14 @@
                 {
                     "text": "command subscriber\n",
                     "id": "ilmhzp9ue01y1xh2yhf4o15e"
+                },
+                {
+                    "text": "в internal/transport/nats/publisher_routes/v1/lifecycle.go раздеить каждый роутер по разным файлам в одну папку\n",
+                    "id": "l7whjdq8g3olhkava07na4r3"
+                },
+                {
+                    "text": "run_bot_uc",
+                    "id": "hula4lspz3m1yllu5ce2awg8"
                 }
             ],
             "id": "fp0qxvhfpfek5drgp78ftr2p",
@@ -51,5 +50,5 @@
     ],
     "autosave": true,
     "saveToFile": true,
-    "timestamp": 1795307340891
+    "timestamp": 1795348499028
 }

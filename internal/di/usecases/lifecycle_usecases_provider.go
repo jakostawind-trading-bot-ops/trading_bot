@@ -23,14 +23,14 @@ func StartBotUCProvider(
 	}
 }
 
-func ChangeBotStatusUCProvider(
+func RunBotUCProvider(
 	Logger *slog.Logger,
 	GeneralState *states.GeneralState,
 	Lifecycle *lifecycle.Lifecycle,
 	EventPublisherPort ports.EventPublisherPort,
-) *usecases_lifecycle.ChangeBotStatusUC {
-	return &usecases_lifecycle.ChangeBotStatusUC{
-		Logger:             Logger.With("component", "change_bot_status_use_case", "bot_id", GeneralState.BotID),
+) *usecases_lifecycle.RunBotUC {
+	return &usecases_lifecycle.RunBotUC{
+		Logger:             Logger.With("component", "run_bot_use_case", "bot_id", GeneralState.BotID),
 		GeneralState:       GeneralState,
 		Lifecycle:          *Lifecycle,
 		EventPublisherPort: EventPublisherPort,

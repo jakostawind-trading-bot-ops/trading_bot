@@ -7,15 +7,14 @@ type BotStartedEvent struct {
 	BotStatus lifecycle.LifecycleStatus
 }
 
-type BotStatusChangedEvent struct {
+type BotRunnedEvent struct {
 	BaseBotEvent
 	PreviousBotStatus lifecycle.LifecycleStatus
-	CurrentBotStatus lifecycle.LifecycleStatus
+	CurrentBotStatus  lifecycle.LifecycleStatus
 }
 
-type BotStatusChangedErrorEvent struct {
+type BotRunnedErrorEvent struct {
 	BaseBotEvent
 	BotStatus lifecycle.LifecycleStatus
-	RequestedBotStatus lifecycle.LifecycleStatus
-	ErrorBotStatus lifecycle.LifecycleStatus
+	Error     string
 }

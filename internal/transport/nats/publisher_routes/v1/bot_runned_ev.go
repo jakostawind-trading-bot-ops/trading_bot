@@ -15,23 +15,23 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// BotStatusChangedEventV1PublisherRoute связывает смену статуса бота с JSON-контрактом V1.
-func BotStatusChangedEventV1PublisherRoute() ports.EventPublisherRoute {
+// BotRunnedEventV1PublisherRoute связывает переход в Running с JSON-контрактом V1.
+func BotRunnedEventV1PublisherRoute() ports.EventPublisherRoute {
 	return ports.EventPublisherRoute{
-		EventType:   reflect.TypeFor[*events.BotStatusChangedEvent](),
-		MessageType: "v1.lifecycle.bot_status_changed_event",
+		EventType:   reflect.TypeFor[*events.BotRunnedEvent](),
+		MessageType: "v1.lifecycle.bot_runned_event",
 		Encode: func(Context context.Context, Event events.BaseBotEventI) (Data []byte, EncodeError error) {
-			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotStatusChangedEventV1.Encode")
+			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotRunnedEventV1.Encode")
 			defer tracing.FinishSpan(Span, &EncodeError)
 			if ContextError := Context.Err(); ContextError != nil {
 				return nil, ContextError
 			}
-			BotEvent, Matches := Event.(*events.BotStatusChangedEvent)
+			BotEvent, Matches := Event.(*events.BotRunnedEvent)
 			if !Matches || BotEvent == nil {
-				return nil, fmt.Errorf("ожидался ненулевой *events.BotStatusChangedEvent")
+				return nil, fmt.Errorf("ожидался ненулевой *events.BotRunnedEvent")
 			}
 
-			Contract := &lifecyclev1.BotStatusChangedEventContractV1{
+			Contract := &lifecyclev1.BotRunnedEventContractV1{
 				BaseBotEventContractV1: commonv1.BaseBotEventContractV1{
 					BotID:     BotEvent.BotID,
 					Payload:   BotEvent.Payload,
@@ -41,49 +41,48 @@ func BotStatusChangedEventV1PublisherRoute() ports.EventPublisherRoute {
 				CurrentBotStatus:  string(BotEvent.CurrentBotStatus),
 			}
 			if ValidationError := Contract.Validate(); ValidationError != nil {
-				return nil, fmt.Errorf("валидация BotStatusChangedEvent V1: %w", ValidationError)
+				return nil, fmt.Errorf("валидация BotRunnedEvent V1: %w", ValidationError)
 			}
 			Data, EncodeError = json.Marshal(Contract)
 			if EncodeError != nil {
-				return nil, logging.SafeError("ошибка кодирования BotStatusChangedEvent V1", EncodeError)
+				return nil, logging.SafeError("ошибка кодирования BotRunnedEvent V1", EncodeError)
 			}
 			return Data, nil
 		},
 	}
 }
 
-// BotStatusChangedErrorEventV1PublisherRoute связывает ошибку смены статуса с JSON-контрактом V1.
-func BotStatusChangedErrorEventV1PublisherRoute() ports.EventPublisherRoute {
+// BotRunnedErrorEventV1PublisherRoute связывает отказ в запуске с JSON-контрактом V1.
+func BotRunnedErrorEventV1PublisherRoute() ports.EventPublisherRoute {
 	return ports.EventPublisherRoute{
-		EventType:   reflect.TypeFor[*events.BotStatusChangedErrorEvent](),
-		MessageType: "v1.lifecycle.bot_status_changed_error_event",
+		EventType:   reflect.TypeFor[*events.BotRunnedErrorEvent](),
+		MessageType: "v1.lifecycle.bot_runned_error_event",
 		Encode: func(Context context.Context, Event events.BaseBotEventI) (Data []byte, EncodeError error) {
-			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotStatusChangedErrorEventV1.Encode")
+			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotRunnedErrorEventV1.Encode")
 			defer tracing.FinishSpan(Span, &EncodeError)
 			if ContextError := Context.Err(); ContextError != nil {
 				return nil, ContextError
 			}
-			BotEvent, Matches := Event.(*events.BotStatusChangedErrorEvent)
+			BotEvent, Matches := Event.(*events.BotRunnedErrorEvent)
 			if !Matches || BotEvent == nil {
-				return nil, fmt.Errorf("ожидался ненулевой *events.BotStatusChangedErrorEvent")
+				return nil, fmt.Errorf("ожидался ненулевой *events.BotRunnedErrorEvent")
 			}
 
-			Contract := &lifecyclev1.BotStatusChangedErrorEventContractV1{
+			Contract := &lifecyclev1.BotRunnedErrorEventContractV1{
 				BaseBotEventContractV1: commonv1.BaseBotEventContractV1{
 					BotID:     BotEvent.BotID,
 					Payload:   BotEvent.Payload,
 					Timestamp: BotEvent.Timestamp,
 				},
-				BotStatus:          string(BotEvent.BotStatus),
-				RequestedBotStatus: string(BotEvent.RequestedBotStatus),
-				ErrorBotStatus:     string(BotEvent.ErrorBotStatus),
+				BotStatus: string(BotEvent.BotStatus),
+				Error:     BotEvent.Error,
 			}
 			if ValidationError := Contract.Validate(); ValidationError != nil {
-				return nil, fmt.Errorf("валидация BotStatusChangedErrorEvent V1: %w", ValidationError)
+				return nil, fmt.Errorf("валидация BotRunnedErrorEvent V1: %w", ValidationError)
 			}
 			Data, EncodeError = json.Marshal(Contract)
 			if EncodeError != nil {
-				return nil, logging.SafeError("ошибка кодирования BotStatusChangedErrorEvent V1", EncodeError)
+				return nil, logging.SafeError("ошибка кодирования BotRunnedErrorEvent V1", EncodeError)
 			}
 			return Data, nil
 		},
