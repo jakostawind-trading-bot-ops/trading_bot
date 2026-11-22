@@ -3,6 +3,7 @@ package di_states
 import (
 	"log/slog"
 
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/lifecycle"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
 )
 
@@ -14,5 +15,5 @@ func GeneralStateProvider(Logger *slog.Logger) (*states.GeneralState, error) {
 		return nil, GenerateError
 	}
 	Logger.Debug("Создано состояние экземпляра", "component", "general_state", "operation", "initialize_state", "bot_id", BotID)
-	return &states.GeneralState{BotID: BotID}, nil
+	return &states.GeneralState{BotID: BotID, BotStatus: lifecycle.STARTED}, nil
 }

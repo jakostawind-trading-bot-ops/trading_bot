@@ -140,11 +140,12 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 		return fmt.Errorf("publisher: фабрика вернула пустой JetStream")
 	}
 	Logger.DebugContext(PublishContext, "Отправка события в JetStream", "subject", Subject, "payload_size", len(Data))
-	Ack, PublishError := JetStream.Publish(
-		Subject, Data,
-		nats.Context(PublishContext),
-		nats.ExpectStream(Publisher.StreamName),
-	)
+	Options := []nats.PubOpt{nats.Context(PublishContext), nats.ExpectStream(Publisher.StreamName)}
+	if Sequence := ports.ControlCommandSequence(Context); Sequence != 0 {
+		// При потере PubAck повтор имеет тот же Nats-Msg-Id в окне дедупликации stream.
+		Options = append(Options, nats.MsgId(fmt.Sprintf("%s:%d", Subject, Sequence)))
+	}
+	Ack, PublishError := JetStream.Publish(Subject, Data, Options...)
 	if PublishError != nil {
 		return fmt.Errorf("publisher: публикация %s: %w", Subject, PublishError)
 	}

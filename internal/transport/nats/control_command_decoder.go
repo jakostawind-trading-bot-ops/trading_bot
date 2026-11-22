@@ -7,13 +7,14 @@ import (
 
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
 	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"go.opentelemetry.io/otel"
 )
 
 // ControlCommandDecoder хранит версионные маршруты входящих команд.
 type ControlCommandDecoder struct {
-	Routes map[string]func(context.Context, []byte) (commands.BaseControlCommandI, error) // Декодеры по суффиксу subject.
-	Logger *slog.Logger                                                                   // Логгер декодера из DI.
+	Routes map[string]ports.ControlCommandDecoderRoute // Декодеры по суффиксу subject.
+	Logger *slog.Logger                                // Логгер декодера из DI.
 }
 
 // Decode выбирает контракт по MessageType и передаёт Data в версионный декодер.
@@ -23,9 +24,9 @@ func (Decoder ControlCommandDecoder) Decode(Context context.Context, MessageType
 	defer tracing.FinishSpan(Span, &DecodeError)
 	Logger := Decoder.Logger.With("operation", "decode_control_command", "message_type", MessageType)
 	Logger.DebugContext(Context, "Поиск маршрута декодирования", "payload_size", len(Data))
-	DecodeCommand, Found := Decoder.Routes[MessageType]
+	Route, Found := Decoder.Routes[MessageType]
 	if !Found {
 		return nil, fmt.Errorf("неизвестный тип команды %q", MessageType)
 	}
-	return DecodeCommand(Context, Data)
+	return Route.Decode(Context, Data)
 }

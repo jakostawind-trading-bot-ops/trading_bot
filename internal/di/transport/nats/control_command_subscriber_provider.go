@@ -4,22 +4,22 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
 	transport "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats"
-	contracts "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/control/bot/v1/lifecycle"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/fx"
 )
 
 // ControlCommandDecoderProvider связывает версионный суффикс subject с декодером JSON.
-func ControlCommandDecoderProvider(Logger *slog.Logger) ports.ControlCommandDecoderPort {
+func ControlCommandDecoderProvider(Routes []ports.ControlCommandDecoderRoute, Logger *slog.Logger) ports.ControlCommandDecoderPort {
+	RouteMap := make(map[string]ports.ControlCommandDecoderRoute, len(Routes))
+	for _, Route := range Routes {
+		RouteMap[Route.MessageType] = Route
+	}
 	return transport.ControlCommandDecoder{
 		Logger: Logger.With("component", "control_command_decoder"),
-		Routes: map[string]func(context.Context, []byte) (commands.BaseControlCommandI, error){
-			"v1.lifecycle.start_bot_command": contracts.DecodeStartBotCommand,
-		},
+		Routes: RouteMap,
 	}
 }
 

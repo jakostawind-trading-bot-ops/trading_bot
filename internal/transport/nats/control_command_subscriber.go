@@ -177,6 +177,13 @@ func (Subscriber *ControlCommandSubscriber) handleMessage(Context context.Contex
 		}
 		return
 	}
+	Metadata, MetadataError := Message.Metadata()
+	if MetadataError != nil {
+		HandlingError = MetadataError
+		Logger.ErrorContext(Context, "Не удалось получить номер команды в stream", "error", MetadataError)
+		return
+	}
+	Context = ports.WithControlCommandSequence(Context, Metadata.Sequence.Stream)
 	Logger = Logger.With("command_type", fmt.Sprintf("%T", Command))
 	Logger.DebugContext(Context, "Передача команды диспетчеру")
 	if DispatchError := Subscriber.Dispatcher.Dispatch(Context, Command); DispatchError != nil {

@@ -14,6 +14,7 @@ import (
 	di_usecases "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/usecases"
 	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
+	decoder_routes "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/commands_decoder_routes"
 	publisher_routes "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/publisher_routes"
 	usecases_lifecycle "github.com/jakostawind-trading-bot-ops/trading_bot/internal/usecases/lifecycle"
 	"go.opentelemetry.io/otel"
@@ -37,9 +38,11 @@ func main() {
 		// USECASES
 		fx.Provide(
 			di_usecases.StartBotUCProvider,
+			di_usecases.RunBotUCProvider,
 		),
 		fx.Provide(
 			di_commands.ControlCommandDispatcherProvider,
+			decoder_routes.ControlCommandDecoderRoutesRegistry,
 			di_nats.ControlCommandDecoderProvider,
 			di_nats.ControlCommandSubscriberProvider,
 		),
