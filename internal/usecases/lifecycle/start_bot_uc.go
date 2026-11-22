@@ -21,11 +21,10 @@ type StartBotUC struct {
 }
 
 // Execute публикует событие запуска. Возвращает ошибку публикации подписчику команд.
-func (StartBotUC *StartBotUC) Execute(Context context.Context) (PublishError error) {
+func (StartBotUC *StartBotUC) Execute(Context context.Context) (ExecutionError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/usecases/lifecycle").Start(Context, "StartBotUC.Execute")
-	defer tracing.FinishSpan(Span, &PublishError)
-	Logger := StartBotUC.Logger.With("operation", "start_bot")
-	Logger.DebugContext(Context, "Чтение текущего статуса для события запуска")
+	defer tracing.FinishSpan(Span, &ExecutionError)
+	Logger := StartBotUC.Logger.With("operation", "start_bot_uc")
 	Event := &events.BotStartedEvent{
 		BaseBotEvent: events.BaseBotEvent{
 			BotID: StartBotUC.GeneralState.BotID,

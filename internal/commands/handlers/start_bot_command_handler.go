@@ -21,6 +21,6 @@ type StartBotCommandHandler struct {
 func (Handler StartBotCommandHandler) HandleControlCommand(Context context.Context, _ commands.BaseControlCommandI) (HandlerError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/commands/handlers").Start(Context, "StartBotCommandHandler.HandleControlCommand")
 	defer tracing.FinishSpan(Span, &HandlerError)
-	Handler.Logger.DebugContext(Context, "Вызов сценария запуска бота", "operation", "handle_start_bot_command")
+	Handler.Logger.DebugContext(Context, "Вызов StartBotUC", "operation", "handle_start_bot_command")
 	return Handler.StartBot.Execute(Context)
 }

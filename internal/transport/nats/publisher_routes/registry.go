@@ -9,5 +9,7 @@ import (
 func EventPublisherRoutesRegistry() []ports.EventPublisherRoute {
 	return []ports.EventPublisherRoute{
 		v1.BotStartedEventV1PublisherRoute(),
+		v1.BotStatusChangedEventV1PublisherRoute(),
+		v1.BotStatusChangedErrorEventV1PublisherRoute(),
 	}
 }

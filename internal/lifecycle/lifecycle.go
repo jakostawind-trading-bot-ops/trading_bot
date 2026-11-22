@@ -41,15 +41,22 @@ func (Lifecycle *Lifecycle) EnsureStatus(Context context.Context, Allowed ...Lif
 	return fmt.Errorf("cannot change status from %s; allowed statuses: %s", CurrentStatus, strings.Join(AllowedNames, ", "))
 }
 
-// ChangeStatus устанавливает NewStatus и записывает предыдущий статус.
-// Как и прежде, несовпадение с Allowed не блокирует переход. Context связывает проверку и изменение.
-func (Lifecycle *Lifecycle) ChangeStatus(Context context.Context, NewStatus LifecycleStatus, Allowed ...LifecycleStatus) {
+// ChangeStatus устанавливает NewStatus, если текущий статус входит в Allowed.
+// При недопустимом переходе возвращает ошибку и сохраняет текущий статус.
+func (Lifecycle *Lifecycle) ChangeStatus(Context context.Context, NewStatus LifecycleStatus, Allowed ...LifecycleStatus) (StatusError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/lifecycle").Start(Context, "Lifecycle.ChangeStatus")
-	defer Span.End()
-	Logger := Lifecycle.Logger.With("operation", "change_status", "previous_status", Lifecycle.GeneralState.GetBotStatus(), "new_status", NewStatus)
-	if StatusError := Lifecycle.EnsureStatus(Context, Allowed...); StatusError != nil {
-		Logger.WarnContext(Context, "Переход из статуса вне списка допустимых", "error", StatusError)
+	defer tracing.FinishSpan(Span, &StatusError)
+
+	if StatusError = Lifecycle.EnsureStatus(Context, Allowed...); StatusError != nil {
+		return StatusError
 	}
+
+	PreviousStatus := Lifecycle.GeneralState.GetBotStatus()
 	Lifecycle.GeneralState.SetBotStatus(NewStatus)
-	Logger.InfoContext(Context, "Статус бота изменён")
+	Lifecycle.Logger.InfoContext(Context, "Статус бота изменён",
+		"operation", "change_status",
+		"previous_status", PreviousStatus,
+		"new_status", NewStatus,
+	)
+	return nil
 }

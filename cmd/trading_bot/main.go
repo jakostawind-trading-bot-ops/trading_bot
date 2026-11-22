@@ -37,6 +37,7 @@ func main() {
 		// USECASES
 		fx.Provide(
 			di_usecases.StartBotUCProvider,
+			di_usecases.ChangeBotStatusUCProvider,
 		),
 		fx.Provide(
 			di_commands.ControlCommandDispatcherProvider,
