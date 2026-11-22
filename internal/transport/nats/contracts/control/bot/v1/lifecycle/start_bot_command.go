@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
+	logging "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/logging"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"go.opentelemetry.io/otel"
 )
 
@@ -24,10 +25,10 @@ type StartBotCommandV1 struct {
 //	JSON -> контракт V1 -> проверка полей -> StartBotCommand
 func DecodeStartBotCommand(Context context.Context, Data []byte) (Command commands.BaseControlCommandI, ContractError error) {
 	_, Span := otel.Tracer("trading_bot/internal/transport/nats/contracts/control/bot/v1/lifecycle").Start(Context, "StartBotCommandV1.Decode")
-	defer telemetry.FinishSpan(Span, &ContractError)
+	defer tracing.FinishSpan(Span, &ContractError)
 	var Contract StartBotCommandV1
 	if DecodeError := json.Unmarshal(Data, &Contract); DecodeError != nil {
-		return nil, telemetry.SafeError("некорректный JSON команды запуска", DecodeError)
+		return nil, logging.SafeError("некорректный JSON команды запуска", DecodeError)
 	}
 	if strings.TrimSpace(Contract.BotID) == "" || strings.TrimSpace(Contract.Timestamp) == "" {
 		return nil, fmt.Errorf("для команды запуска обязательны bot_id и timestamp")

@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
@@ -92,7 +92,7 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 	Event events.BaseBotEventI,
 ) (PublishError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/transport/nats").Start(Context, "NatsEventPublisher.PublishEvent")
-	defer telemetry.FinishSpan(Span, &PublishError)
+	defer tracing.FinishSpan(Span, &PublishError)
 	Logger := Publisher.Logger.With("operation", "publish_bot_event", "event_type", fmt.Sprintf("%T", Event))
 	Logger.DebugContext(Context, "Поиск маршрута публикации")
 	// Проверяем событие до вызова его методов.

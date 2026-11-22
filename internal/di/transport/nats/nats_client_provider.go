@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -239,7 +240,7 @@ func safeConnectionError(ConnectionError error) error {
 //	    Context.Err()
 func (NatsClient *NatsClient) WaitConnection(Context context.Context) (Connection *nats.Conn, WaitError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/di/transport/nats").Start(Context, "NatsClient.WaitConnection")
-	defer internal.FinishSpan(Span, &WaitError)
+	defer tracing.FinishSpan(Span, &WaitError)
 	NatsClient.Logger.DebugContext(Context, "Ожидание подключённого клиента NATS", "operation", "wait_connection")
 	Ticker := time.NewTicker(100 * time.Millisecond)
 	defer Ticker.Stop()

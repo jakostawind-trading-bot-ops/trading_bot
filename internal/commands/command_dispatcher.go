@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"reflect"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"go.opentelemetry.io/otel"
 )
 
@@ -20,7 +20,7 @@ type ControlCommandDispatcher struct {
 // Ошибка маршрутизации или выполнения возвращается подписчику для решения об Ack.
 func (Dispatcher ControlCommandDispatcher) Dispatch(Context context.Context, Command BaseControlCommandI) (DispatchError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/commands").Start(Context, "ControlCommandDispatcher.Dispatch")
-	defer telemetry.FinishSpan(Span, &DispatchError)
+	defer tracing.FinishSpan(Span, &DispatchError)
 	CommandType := reflect.TypeOf(Command)
 	Logger := Dispatcher.Logger.With("operation", "dispatch_control_command", "command_type", fmt.Sprintf("%T", Command))
 	Logger.DebugContext(Context, "Поиск обработчика команды")

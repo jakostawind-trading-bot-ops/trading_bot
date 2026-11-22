@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.opentelemetry.io/otel"
@@ -120,7 +120,7 @@ func (Subscriber *ControlCommandSubscriber) receive(ReceiveContext, HandlerConte
 // openConsumer получает соединение и открывает персональный consumer в пределах ReceiveContext.
 func (Subscriber *ControlCommandSubscriber) openConsumer(ReceiveContext context.Context) (Connection jetstream.JetStream, OpenedConsumer jetstream.Consumer, OpenError error) {
 	ReceiveContext, Span := otel.Tracer("trading_bot/internal/transport/nats").Start(ReceiveContext, "ControlCommandSubscriber.OpenConsumer")
-	defer telemetry.FinishSpan(Span, &OpenError)
+	defer tracing.FinishSpan(Span, &OpenError)
 	ConsumerName := "bot_command_" + Subscriber.BotID
 	Logger := Subscriber.Logger.With("operation", "open_consumer", "consumer", ConsumerName)
 	Logger.DebugContext(ReceiveContext, "Ожидание соединения для подписки")
@@ -162,7 +162,7 @@ func (Subscriber *ControlCommandSubscriber) subjectPrefix() string {
 func (Subscriber *ControlCommandSubscriber) handleMessage(Context context.Context, Message jetstream.Msg) {
 	Context, Span := otel.Tracer("trading_bot/internal/transport/nats").Start(Context, "ControlCommandSubscriber.HandleMessage")
 	var HandlingError error
-	defer telemetry.FinishSpan(Span, &HandlingError)
+	defer tracing.FinishSpan(Span, &HandlingError)
 	Started := time.Now()
 	Logger := Subscriber.Logger.With("operation", "handle_control_command", "subject", Message.Subject())
 	Logger.DebugContext(Context, "Получена команда", "payload_size", len(Message.Data()))
@@ -200,7 +200,7 @@ func (Subscriber *ControlCommandSubscriber) handleMessage(Context context.Contex
 // decodeMessage проверяет subject и после декодирования сверяет адресата из JSON.
 func (Subscriber *ControlCommandSubscriber) decodeMessage(Context context.Context, Message jetstream.Msg) (Decoded commands.BaseControlCommandI, ValidationError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/transport/nats").Start(Context, "ControlCommandSubscriber.DecodeMessage")
-	defer telemetry.FinishSpan(Span, &ValidationError)
+	defer tracing.FinishSpan(Span, &ValidationError)
 	MessageType, Matches := strings.CutPrefix(Message.Subject(), Subscriber.subjectPrefix())
 	if !Matches || MessageType == "" {
 		return nil, fmt.Errorf("неверный subject команды")

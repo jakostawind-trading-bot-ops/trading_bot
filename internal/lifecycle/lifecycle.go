@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"go.opentelemetry.io/otel"
 )
 
@@ -26,7 +26,7 @@ type BotStatus interface {
 // Возвращает ошибку с текущим и допустимыми статусами при несовпадении.
 func (Lifecycle *Lifecycle) EnsureStatus(Context context.Context, Allowed ...LifecycleStatus) (StatusError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/lifecycle").Start(Context, "Lifecycle.EnsureStatus")
-	defer telemetry.FinishSpan(Span, &StatusError)
+	defer tracing.FinishSpan(Span, &StatusError)
 	CurrentStatus := Lifecycle.GeneralState.GetBotStatus()
 	Lifecycle.Logger.DebugContext(Context, "Проверка текущего статуса", "operation", "ensure_status", "bot_status", CurrentStatus)
 	for _, Status := range Allowed {

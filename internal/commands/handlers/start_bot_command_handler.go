@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	usecases "github.com/jakostawind-trading-bot-ops/trading_bot/internal/usecases/lifecycle"
 	"go.opentelemetry.io/otel"
 )
@@ -20,7 +20,7 @@ type StartBotCommandHandler struct {
 // Маршрут привязан к *commands.StartBotCommand при сборке диспетчера.
 func (Handler StartBotCommandHandler) HandleControlCommand(Context context.Context, _ commands.BaseControlCommandI) (HandlerError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/commands/handlers").Start(Context, "StartBotCommandHandler.HandleControlCommand")
-	defer telemetry.FinishSpan(Span, &HandlerError)
+	defer tracing.FinishSpan(Span, &HandlerError)
 	Handler.Logger.DebugContext(Context, "Вызов сценария запуска бота", "operation", "handle_start_bot_command")
 	return Handler.StartBot.Execute(Context)
 }

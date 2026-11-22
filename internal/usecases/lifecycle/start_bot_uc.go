@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/lifecycle"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
 	"go.opentelemetry.io/otel"
@@ -23,7 +23,7 @@ type StartBotUC struct {
 // Execute публикует событие запуска. Возвращает ошибку публикации подписчику команд.
 func (StartBotUC *StartBotUC) Execute(Context context.Context) (PublishError error) {
 	Context, Span := otel.Tracer("trading_bot/internal/usecases/lifecycle").Start(Context, "StartBotUC.Execute")
-	defer telemetry.FinishSpan(Span, &PublishError)
+	defer tracing.FinishSpan(Span, &PublishError)
 	Logger := StartBotUC.Logger.With("operation", "start_bot")
 	Logger.DebugContext(Context, "Чтение текущего статуса для события запуска")
 	Event := &events.BotStartedEvent{

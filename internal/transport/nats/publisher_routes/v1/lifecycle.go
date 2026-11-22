@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"reflect"
 
-	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
+	logging "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/logging"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	transport_nats_contracts_bot_control_v1_common "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/bot/control/v1/common"
 	transport_nats_contracts_bot_control_v1_lifecycle "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/bot/control/v1/lifecycle"
@@ -21,7 +22,7 @@ func BotStartedEventV1PublisherRoute() ports.EventPublisherRoute {
 		MessageType: "v1.lifecycle.bot_started_event",
 		Encode: func(Context context.Context, Event events.BaseBotEventI) (Data []byte, EncodeError error) {
 			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotStartedEventV1.Encode")
-			defer telemetry.FinishSpan(Span, &EncodeError)
+			defer tracing.FinishSpan(Span, &EncodeError)
 			if ContextError := Context.Err(); ContextError != nil {
 				return nil, ContextError
 			}
@@ -43,7 +44,7 @@ func BotStartedEventV1PublisherRoute() ports.EventPublisherRoute {
 			}
 			Data, EncodeError = json.Marshal(Contract)
 			if EncodeError != nil {
-				return nil, telemetry.SafeError("ошибка кодирования BotStartedEvent V1", EncodeError)
+				return nil, logging.SafeError("ошибка кодирования BotStartedEvent V1", EncodeError)
 			}
 			return Data, nil
 		},

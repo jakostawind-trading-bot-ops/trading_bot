@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jakostawind-trading-bot-ops/trading_bot/internal"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 )
@@ -26,7 +26,7 @@ func NatsBotEventJetStreamProvider(
 ) BotEventJetStreamFactory {
 	return func(Context context.Context) (JetStream nats.JetStreamContext, ConnectionError error) {
 		Context, Span := otel.Tracer("trading_bot/internal/di/transport/nats").Start(Context, "NatsClient.OpenEventJetStream")
-		defer internal.FinishSpan(Span, &ConnectionError)
+		defer tracing.FinishSpan(Span, &ConnectionError)
 		Connection, ConnectionError := NatsClient.WaitConnection(Context)
 		if ConnectionError != nil {
 			return nil, ConnectionError
