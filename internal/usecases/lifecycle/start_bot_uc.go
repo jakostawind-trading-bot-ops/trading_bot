@@ -6,30 +6,32 @@ import (
 
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/lifecycle"
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
+	"go.opentelemetry.io/otel"
 )
 
+// StartBotUC строит событие запуска по текущему состоянию и публикует его в JetStream.
 type StartBotUC struct {
-	GeneralState       *states.GeneralState
-	Lifecycle          lifecycle.Lifecycle
-	EventPublisherPort ports.EventPublisherPort
+	Logger             *slog.Logger             // Логгер сценария с идентификатором бота.
+	GeneralState       *states.GeneralState     // Состояние бота в памяти, включая BotID.
+	Lifecycle          lifecycle.Lifecycle      // Управление статусом этого экземпляра.
+	EventPublisherPort ports.EventPublisherPort // Издатель, возвращающий результат публикации.
 }
 
 // Execute публикует событие запуска. Возвращает ошибку публикации подписчику команд.
-func (StartBotUC *StartBotUC) Execute(Context context.Context) error {
+func (StartBotUC *StartBotUC) Execute(Context context.Context) (PublishError error) {
+	Context, Span := otel.Tracer("trading_bot/internal/usecases/lifecycle").Start(Context, "StartBotUC.Execute")
+	defer tracing.FinishSpan(Span, &PublishError)
+	Logger := StartBotUC.Logger.With("operation", "start_bot")
+	Logger.DebugContext(Context, "Чтение текущего статуса для события запуска")
 	Event := &events.BotStartedEvent{
 		BaseBotEvent: events.BaseBotEvent{
 			BotID: StartBotUC.GeneralState.BotID,
 		},
 		BotStatus: StartBotUC.GeneralState.GetBotStatus(),
 	}
-	Logger := slog.With("operation", "start_bot", "bot_id", Event.BotID)
 	Logger.DebugContext(Context, "Публикация BotStartedEvent", "bot_status", Event.BotStatus)
-	if PublishError := StartBotUC.EventPublisherPort.PublishEvent(Context, Event); PublishError != nil {
-		Logger.ErrorContext(Context, "Не удалось опубликовать BotStartedEvent", "error", PublishError)
-		return PublishError
-	}
-
-	return nil
+	return StartBotUC.EventPublisherPort.PublishEvent(Context, Event)
 }

@@ -4,13 +4,15 @@ import (
 	"context"
 	"time"
 
+	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
 )
 
 // BotEventJetStreamFactory получает JetStream после подключения NATS.
-// ctx отменяет ожидание соединения. Результат — JetStreamContext либо ошибка
+// Context отменяет ожидание соединения. Результат — JetStreamContext либо ошибка
 // ожидания/создания. Запросы JetStream ограничены таймаутом в три секунды.
-type BotEventJetStreamFactory func(ctx context.Context) (nats.JetStreamContext, error)
+type BotEventJetStreamFactory func(Context context.Context) (nats.JetStreamContext, error)
 
 // NatsBotEventJetStreamProvider возвращает функцию отложенного получения
 // JetStream. NatsClient — владелец соединения, создаваемый общим провайдером.
@@ -22,12 +24,14 @@ type BotEventJetStreamFactory func(ctx context.Context) (nats.JetStreamContext, 
 func NatsBotEventJetStreamProvider(
 	NatsClient *NatsClient,
 ) BotEventJetStreamFactory {
-	return func(ctx context.Context) (nats.JetStreamContext, error) {
-		Conn, err := NatsClient.WaitConnection(ctx)
-		if err != nil {
-			return nil, err
+	return func(Context context.Context) (JetStream nats.JetStreamContext, ConnectionError error) {
+		Context, Span := otel.Tracer("trading_bot/internal/di/transport/nats").Start(Context, "NatsClient.OpenEventJetStream")
+		defer tracing.FinishSpan(Span, &ConnectionError)
+		Connection, ConnectionError := NatsClient.WaitConnection(Context)
+		if ConnectionError != nil {
+			return nil, ConnectionError
 		}
 		// Ограничиваем Bind-запрос, сохраняя явное закрытие через Drain.
-		return Conn.JetStream(nats.MaxWait(3 * time.Second))
+		return Connection.JetStream(nats.MaxWait(3 * time.Second))
 	}
 }
