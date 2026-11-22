@@ -1,6 +1,7 @@
 package di_commands
 
 import (
+	"log/slog"
 	"reflect"
 
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
@@ -10,8 +11,14 @@ import (
 )
 
 // ControlCommandDispatcherProvider регистрирует прикладные маршруты до запуска подписчика.
-func ControlCommandDispatcherProvider(StartBot *usecases.StartBotUC) ports.ControlCommandDispatcherPort {
+func ControlCommandDispatcherProvider(StartBot *usecases.StartBotUC, Logger *slog.Logger) ports.ControlCommandDispatcherPort {
 	return commands.ControlCommandDispatcher{
-		reflect.TypeFor[*commands.StartBotCommand](): handlers.StartBotCommandHandler{StartBot: StartBot},
+		Logger: Logger.With("component", "control_command_dispatcher"),
+		Handlers: map[reflect.Type]commands.ControlCommandHandlerI{
+			reflect.TypeFor[*commands.StartBotCommand](): handlers.StartBotCommandHandler{
+				StartBot: StartBot,
+				Logger:   Logger.With("component", "start_bot_command_handler"),
+			},
+		},
 	}
 }

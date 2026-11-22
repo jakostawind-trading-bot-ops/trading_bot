@@ -6,22 +6,27 @@ import (
 	"fmt"
 	"reflect"
 
+	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	transport_nats_contracts_bot_control_v1_common "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/bot/control/v1/common"
 	transport_nats_contracts_bot_control_v1_lifecycle "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats/contracts/bot/control/v1/lifecycle"
+	"go.opentelemetry.io/otel"
 )
 
+// BotStartedEventV1PublisherRoute связывает событие запуска с JSON-контрактом V1.
 func BotStartedEventV1PublisherRoute() ports.EventPublisherRoute {
 	return ports.EventPublisherRoute{
 		EventType:   reflect.TypeFor[*events.BotStartedEvent](),
 		MessageType: "v1.lifecycle.bot_started_event",
-		Encode: func(ctx context.Context, Event events.BaseBotEventI) ([]byte, error) {
-			if err := ctx.Err(); err != nil {
-				return nil, err
+		Encode: func(Context context.Context, Event events.BaseBotEventI) (Data []byte, EncodeError error) {
+			Context, Span := otel.Tracer("trading_bot/internal/transport/nats/publisher_routes/v1").Start(Context, "BotStartedEventV1.Encode")
+			defer telemetry.FinishSpan(Span, &EncodeError)
+			if ContextError := Context.Err(); ContextError != nil {
+				return nil, ContextError
 			}
-			BotEvent, ok := Event.(*events.BotStartedEvent)
-			if !ok || BotEvent == nil {
+			BotEvent, Matches := Event.(*events.BotStartedEvent)
+			if !Matches || BotEvent == nil {
 				return nil, fmt.Errorf("ожидался ненулевой *events.BotStartedEvent")
 			}
 
@@ -33,12 +38,12 @@ func BotStartedEventV1PublisherRoute() ports.EventPublisherRoute {
 					Timestamp: BotEvent.Timestamp,
 				},
 			}
-			if err := Contract.Validate(); err != nil {
-				return nil, fmt.Errorf("валидация BotStartedEvent V1: %w", err)
+			if ValidationError := Contract.Validate(); ValidationError != nil {
+				return nil, fmt.Errorf("валидация BotStartedEvent V1: %w", ValidationError)
 			}
-			Data, err := json.Marshal(Contract)
-			if err != nil {
-				return nil, fmt.Errorf("кодирование BotStartedEvent V1: %w", err)
+			Data, EncodeError = json.Marshal(Contract)
+			if EncodeError != nil {
+				return nil, telemetry.SafeError("ошибка кодирования BotStartedEvent V1", EncodeError)
 			}
 			return Data, nil
 		},

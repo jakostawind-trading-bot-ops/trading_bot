@@ -9,29 +9,32 @@ import (
 	"time"
 	"unicode"
 
+	telemetry "github.com/jakostawind-trading-bot-ops/trading_bot/internal"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/events"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
 )
 
-const publishTimeout = 3 * time.Second // Общий предел ожидания соединения и PubAck.
+const PublishTimeout = 3 * time.Second // Общий предел ожидания соединения и PubAck.
 
-// JetStreamFactory получает актуальный клиент; ctx отменяет ожидание подключения.
+// JetStreamFactory получает актуальный клиент; Context отменяет ожидание подключения.
 // Возвращает JetStreamContext либо ошибку; соединением владеет NatsClient.
-type JetStreamFactory func(ctx context.Context) (nats.JetStreamContext, error)
+type JetStreamFactory func(Context context.Context) (nats.JetStreamContext, error)
 
 // NatsEventPublisher кодирует события и публикует их с ожиданием PubAck.
 // Создаётся конструктором; таблица маршрутов после создания не меняется.
 type NatsEventPublisher struct {
+	Logger       *slog.Logger                               // Логгер компонента и stream из DI.
 	Routes       map[reflect.Type]ports.EventPublisherRoute // Маршруты по конкретному Go-типу.
-	getJetStream JetStreamFactory                           // Отложенный доступ к текущему соединению.
-	streamName   string                                     // Ожидаемый существующий stream; publisher его не создаёт.
+	GetJetStream JetStreamFactory                           // Отложенный доступ к текущему соединению.
+	StreamName   string                                     // Ожидаемый существующий stream; publisher его не создаёт.
 }
 
 var _ ports.EventPublisherPort = (*NatsEventPublisher)(nil)
 
 // NewNatsEventPublisher проверяет Routes и собирает publisher без сетевых вызовов.
-// GetJetStream — ненулевая фабрика; StreamName — имя существующего stream.
+// GetJetStream — ненулевая фабрика, StreamName — имя существующего stream, Logger — логгер компонента.
 // Возвращает publisher либо ошибку зависимости, маршрута или повторного типа.
 //
 // Схема:
@@ -41,9 +44,10 @@ func NewNatsEventPublisher(
 	Routes []ports.EventPublisherRoute,
 	GetJetStream JetStreamFactory,
 	StreamName string,
+	Logger *slog.Logger,
 ) (*NatsEventPublisher, error) {
-	if GetJetStream == nil || strings.TrimSpace(StreamName) == "" {
-		return nil, fmt.Errorf("publisher: нужны JetStream factory и имя stream")
+	if Logger == nil || GetJetStream == nil || strings.TrimSpace(StreamName) == "" {
+		return nil, fmt.Errorf("publisher: нужны логгер, JetStream factory и имя stream")
 	}
 
 	// Ошибки регистрации выявляются при сборке приложения.
@@ -66,14 +70,15 @@ func NewNatsEventPublisher(
 	}
 
 	return &NatsEventPublisher{
+		Logger:       Logger,
 		Routes:       RouteMap,
-		getJetStream: GetJetStream,
-		streamName:   StreamName,
+		GetJetStream: GetJetStream,
+		StreamName:   StreamName,
 	}, nil
 }
 
 // PublishEvent кодирует Event и ждёт подтверждения сохранения в JetStream.
-// ctx должен быть ненулевым; ограничивает ожидание соединения и PubAck.
+// Context должен быть ненулевым; ограничивает ожидание соединения и PubAck.
 // Заполняет отсутствующие Timestamp и Payload в Event.
 // Event нельзя изменять или публиковать параллельно до возврата метода.
 // Возвращает ошибку события, маршрута, кодирования или транспорта.
@@ -83,12 +88,16 @@ func NewNatsEventPublisher(
 //
 //	Event -> маршрут -> JSON и subject -> JetStream -> Publish -> PubAck
 func (Publisher *NatsEventPublisher) PublishEvent(
-	ctx context.Context,
+	Context context.Context,
 	Event events.BaseBotEventI,
-) error {
+) (PublishError error) {
+	Context, Span := otel.Tracer("trading_bot/internal/transport/nats").Start(Context, "NatsEventPublisher.PublishEvent")
+	defer telemetry.FinishSpan(Span, &PublishError)
+	Logger := Publisher.Logger.With("operation", "publish_bot_event", "event_type", fmt.Sprintf("%T", Event))
+	Logger.DebugContext(Context, "Поиск маршрута публикации")
 	// Проверяем событие до вызова его методов.
-	if err := ctx.Err(); err != nil {
-		return err
+	if ContextError := Context.Err(); ContextError != nil {
+		return ContextError
 	}
 	Value := reflect.ValueOf(Event)
 	if !Value.IsValid() || (Value.Kind() == reflect.Pointer && Value.IsNil()) {
@@ -110,38 +119,38 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 		Base.Payload = map[string]any{}
 	}
 
-	Logger := slog.With("component", "nats_publisher", "bot_id", Base.BotID, "message_type", Route.MessageType)
-	Logger.DebugContext(ctx, "Кодирование события")
+	Logger = Logger.With("bot_id", Base.BotID, "message_type", Route.MessageType)
+	Logger.DebugContext(Context, "Кодирование события")
 	// Кодирование выполняется до ожидания транспорта.
-	Data, err := Route.Encode(ctx, Event)
-	if err != nil {
-		return fmt.Errorf("publisher: %s: %w", Route.MessageType, err)
+	Data, EncodeError := Route.Encode(Context, Event)
+	if EncodeError != nil {
+		return fmt.Errorf("publisher: %s: %w", Route.MessageType, EncodeError)
 	}
 	Subject := "bot." + Base.BotID + ".to.control.event." + Route.MessageType
 
 	// Каждый вызов получает актуальное соединение после возможного переподключения.
-	PublishCtx, Cancel := context.WithTimeout(ctx, publishTimeout)
+	PublishContext, Cancel := context.WithTimeout(Context, PublishTimeout)
 	defer Cancel()
-	Logger.DebugContext(PublishCtx, "Ожидание JetStream", "subject", Subject, "stream", Publisher.streamName)
-	JetStream, err := Publisher.getJetStream(PublishCtx)
-	if err != nil {
-		return fmt.Errorf("publisher: получение JetStream: %w", err)
+	Logger.DebugContext(PublishContext, "Ожидание JetStream", "subject", Subject)
+	JetStream, ConnectionError := Publisher.GetJetStream(PublishContext)
+	if ConnectionError != nil {
+		return fmt.Errorf("publisher: получение JetStream: %w", ConnectionError)
 	}
 	if JetStream == nil {
 		return fmt.Errorf("publisher: фабрика вернула пустой JetStream")
 	}
-	Logger.DebugContext(PublishCtx, "Отправка события в JetStream", "subject", Subject)
-	Ack, err := JetStream.Publish(
+	Logger.DebugContext(PublishContext, "Отправка события в JetStream", "subject", Subject, "payload_size", len(Data))
+	Ack, PublishError := JetStream.Publish(
 		Subject, Data,
-		nats.Context(PublishCtx),
-		nats.ExpectStream(Publisher.streamName),
+		nats.Context(PublishContext),
+		nats.ExpectStream(Publisher.StreamName),
 	)
-	if err != nil {
-		return fmt.Errorf("publisher: публикация %s: %w", Subject, err)
+	if PublishError != nil {
+		return fmt.Errorf("publisher: публикация %s: %w", Subject, PublishError)
 	}
 	if Ack != nil {
-		Logger.InfoContext(PublishCtx, "JetStream подтвердил публикацию",
-			"subject", Subject, "stream", Ack.Stream, "sequence", Ack.Sequence)
+		Logger.DebugContext(PublishContext, "JetStream подтвердил публикацию",
+			"subject", Subject, "ack_stream", Ack.Stream, "sequence", Ack.Sequence)
 	}
 	return nil
 }
@@ -150,7 +159,7 @@ func (Publisher *NatsEventPublisher) PublishEvent(
 // wildcard, пробельные и управляющие символы. Возвращает допустимость токена.
 func validSubjectToken(Token string) bool {
 	return Token != "" && !strings.ContainsAny(Token, ".*>") &&
-		strings.IndexFunc(Token, func(r rune) bool {
-			return unicode.IsSpace(r) || unicode.IsControl(r)
+		strings.IndexFunc(Token, func(Character rune) bool {
+			return unicode.IsSpace(Character) || unicode.IsControl(Character)
 		}) == -1
 }

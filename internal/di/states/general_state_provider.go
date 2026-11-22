@@ -1,12 +1,18 @@
 package di_states
 
-import "github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
+import (
+	"log/slog"
+
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
+)
 
 // GeneralStateProvider создаёт состояние бота с новым идентификатором.
-func GeneralStateProvider() (*states.GeneralState, error) {
-	botID, err := states.GenerateBotID()
-	if err != nil {
-		return nil, err
+func GeneralStateProvider(Logger *slog.Logger) (*states.GeneralState, error) {
+	BotID, GenerateError := states.GenerateBotID()
+	if GenerateError != nil {
+		Logger.Error("Не удалось создать идентификатор бота", "component", "general_state", "operation", "initialize_state", "error", GenerateError)
+		return nil, GenerateError
 	}
-	return &states.GeneralState{BotID: botID}, nil
+	Logger.Debug("Создано состояние экземпляра", "component", "general_state", "operation", "initialize_state", "bot_id", BotID)
+	return &states.GeneralState{BotID: BotID}, nil
 }

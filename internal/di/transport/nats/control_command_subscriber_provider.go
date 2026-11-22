@@ -2,7 +2,9 @@ package di_transport_nats
 
 import (
 	"context"
+	"log/slog"
 
+	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/commands"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/ports"
 	"github.com/jakostawind-trading-bot-ops/trading_bot/internal/states"
 	transport "github.com/jakostawind-trading-bot-ops/trading_bot/internal/transport/nats"
@@ -12,9 +14,12 @@ import (
 )
 
 // ControlCommandDecoderProvider связывает версионный суффикс subject с декодером JSON.
-func ControlCommandDecoderProvider() ports.ControlCommandDecoderPort {
+func ControlCommandDecoderProvider(Logger *slog.Logger) ports.ControlCommandDecoderPort {
 	return transport.ControlCommandDecoder{
-		"v1.lifecycle.start_bot_command": contracts.DecodeStartBotCommand,
+		Logger: Logger.With("component", "control_command_decoder"),
+		Routes: map[string]func(context.Context, []byte) (commands.BaseControlCommandI, error){
+			"v1.lifecycle.start_bot_command": contracts.DecodeStartBotCommand,
+		},
 	}
 }
 
@@ -26,6 +31,7 @@ func ControlCommandDecoderProvider() ports.ControlCommandDecoderPort {
 func ControlCommandSubscriberProvider(
 	Lifecycle fx.Lifecycle,
 	Client *NatsClient,
+	Logger *slog.Logger,
 	GeneralState *states.GeneralState,
 	Decoder ports.ControlCommandDecoderPort,
 	Dispatcher ports.ControlCommandDispatcherPort,
@@ -37,7 +43,8 @@ func ControlCommandSubscriberProvider(
 		}
 		return jetstream.New(Connection)
 	}
-	Subscriber, CreationError := transport.NewControlCommandSubscriber(GeneralState.BotID, Connect, Decoder, Dispatcher)
+	SubscriberLogger := Logger.With("component", "control_command_subscriber", "bot_id", GeneralState.BotID, "stream", transport.ControlCommandStream)
+	Subscriber, CreationError := transport.NewControlCommandSubscriber(GeneralState.BotID, Connect, Decoder, Dispatcher, SubscriberLogger)
 	if CreationError != nil {
 		return nil, CreationError
 	}
