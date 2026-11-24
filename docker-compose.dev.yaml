@@ -7,9 +7,22 @@ services:
       target: dev
     env_file: !override
       - ./.env.dev
+    working_dir: /workspace
+    command:
+      - air
+      - --build.cmd=go build -o ./tmp/trading_bot ./trading_bot/cmd/trading_bot
+      - --build.entrypoint=./tmp/trading_bot
+      - --build.send_interrupt=true
+      - --build.include_ext=go,mod,sum,work,tpl,tmpl,html
     volumes:
-      - ./cmd:/app/cmd:ro
-      - ./internal:/app/internal:ro
+      - type: bind
+        source: ../go.work
+        target: /workspace/go.work
+        read_only: true
+        bind:
+          create_host_path: false
+      - .:/workspace/trading_bot:ro
+      - ../go-polymarket-sdk:/workspace/go-polymarket-sdk:ro
     networks:
       - dev_nats
     restart: "no"
