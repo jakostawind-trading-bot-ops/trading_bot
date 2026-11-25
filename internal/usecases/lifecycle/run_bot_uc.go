@@ -50,6 +50,7 @@ func (RunBotUC *RunBotUC) Execute(Context context.Context) (ExecutionError error
 func (RunBotUC *RunBotUC) run(Context context.Context) events.BaseBotEventI {
 	BaseEvent := events.BaseBotEvent{BotID: RunBotUC.GeneralState.BotID}
 	PreviousStatus := RunBotUC.GeneralState.GetBotStatus()
+	
 	if StatusError := RunBotUC.Lifecycle.ChangeStatus(Context, lifecycle.RUNNING, lifecycle.STARTED); StatusError != nil {
 		RunBotUC.Logger.WarnContext(Context, "Запуск отклонён", "operation", "run_bot", "bot_status", PreviousStatus, "error", StatusError)
 		return &events.BotRunnedErrorEvent{BaseBotEvent: BaseEvent, BotStatus: PreviousStatus, Error: StatusError.Error()}

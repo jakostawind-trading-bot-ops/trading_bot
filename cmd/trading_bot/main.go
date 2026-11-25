@@ -10,6 +10,7 @@ import (
 	di_lifecycle "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/lifecycle"
 	di_observability "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/observability"
 	di_states "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/states"
+	di_http "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/transport/http"
 	di_nats "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/transport/nats"
 	di_usecases "github.com/jakostawind-trading-bot-ops/trading_bot/internal/di/usecases"
 	tracing "github.com/jakostawind-trading-bot-ops/trading_bot/internal/observability/tracing"
@@ -27,6 +28,7 @@ func main() {
 	App := fx.New(
 		di.BootstrapSettingsProvider(&Settings),
 		fx.Provide(di_observability.LoggerProvider, di_observability.TracerProvider),
+		fx.Provide(di_http.HTTPClientProvider),
 		fx.Provide(di_nats.NatsClientProvider),
 		fx.Provide(
 			di_states.GeneralStateProvider,
